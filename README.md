@@ -1,6 +1,6 @@
 # SVN DiffTo 
 
-* right click on project in workspace and choose "sVN DiffTo"
+* right click on project in workspace and choose "SVN DiffTo"
 * type svn tag (default ^/trunk)
 * wait to generate
 
