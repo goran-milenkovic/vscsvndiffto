@@ -3,7 +3,7 @@
 	"publisher": "milosjankovic",
 	"displayName": "SVN DiffTo",
 	"description": "SVN DiffTo",
-	"version": "0.0.1",
+	"version": "0.0.2",
 	"engines": {
 		"vscode": "^1.54.0"
 	},
@@ -21,12 +21,19 @@
 				"title": "SVN DiffTo"
 			}
 		],
-		"views": {
-			"explorer": [
-			  {
-				"id": "svnDiffTo",
-				"name": "SVN Diffto"
-			  }
+		"menus": {
+			"commandPalette": [
+				{
+					"command": "svndiffto.svndiffto",
+					"when": "false"
+				}
+			],
+			"explorer/context": [
+				{
+					"command": "svndiffto.svndiffto",
+					"group": "SVN",
+					"when": "true"
+				}
 			]
 		}
 	},

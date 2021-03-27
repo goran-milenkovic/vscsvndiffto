@@ -13,17 +13,3 @@
 ## Requirements
 
 * Ubuntu 20.04
-
-## Extension Settings
-
-TODO
-
-## Known Issues
-
-TODO
-
-## Release Notes
-
-### 0.0.1
-
-Initial release of svn diff to

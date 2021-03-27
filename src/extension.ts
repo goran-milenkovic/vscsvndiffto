@@ -9,198 +9,238 @@ export function activate(context: vscode.ExtensionContext) {
 	// The command has been defined in the package.json file
 	// Now provide the implementation of the command with registerCommand
 	// The commandId parameter must match the command field in package.json
-	let disposable = vscode.commands.registerCommand('svndiffto.svndiffto', () => {
-		let workspaceFolders = vscode.workspace.workspaceFolders;
-		if(typeof workspaceFolders === 'undefined')
-		{
-			workspaceFolders = [];
-		}
+	let disposable = vscode.commands.registerCommand('svndiffto.svndiffto', (params) => {		
+		const workspaceFolderPath = params.path;
+		const pickedProject = workspaceFolderPath.substring(workspaceFolderPath.lastIndexOf("/")+1);
 
-		if(workspaceFolders.length === 0)
-		{
-			vscode.window.showErrorMessage('No workspace folders');
-			return;
-		}
+		let generatingStatusMessage = vscode.window.setStatusBarMessage('fetching svn info');
 
-		const workspaceFoldersConst = workspaceFolders;
-
-		const workspaceFolderNames = workspaceFolders.map(folder => folder.name);
-		const quickPickOptions = workspaceFolderNames.map(label => ({label}));
-		const quickPick = vscode.window.createQuickPick();
-		quickPick.items = quickPickOptions;
-		quickPick.onDidChangeSelection(([{label}]) => {
-			quickPick.hide();
-
-			const pickedProject = label;
-
-			let index = -1;
-			for(var i = 0; i < quickPickOptions.length; i += 1) {
-				if(quickPickOptions[i]['label'] === pickedProject) {
-					index = i;
-					break;
-				}
+		const cp1 = require('child_process');
+		cp1.exec('svn info '+workspaceFolderPath, (err: string, stdout: string, stderr: string) => {
+			if (err) {
+				console.log('error: ' + err);
+				vscode.window.showErrorMessage('error: ' + err);
+				return;
 			}
-			
-			const workspaceFolderPath = workspaceFoldersConst[index].uri.path;
 
-			let generatingStatusMessage = vscode.window.setStatusBarMessage('fetching svn info');
+			generatingStatusMessage.dispose();
+			generatingStatusMessage = vscode.window.setStatusBarMessage('parsing fetched svn info');
 
-			const cp1 = require('child_process');
-			cp1.exec('svn info '+workspaceFolderPath, (err: string, stdout: string, stderr: string) => {
-				if (err) {
-					console.log('error: ' + err);
-					vscode.window.showErrorMessage('error: ' + err);
-					return;
-				}
+			let projectSvnInfoLines = stdout.match(/[^\r\n]+/g);
 
-				generatingStatusMessage.dispose();
-				generatingStatusMessage = vscode.window.setStatusBarMessage('parsing fetched svn info');
+			if(projectSvnInfoLines === null)
+			{
+				vscode.window.showErrorMessage('svn info empty');
+				return;
+			}
 
-				let projectSvnInfoLines = stdout.match(/[^\r\n]+/g);
+			const relativeUrlLine = projectSvnInfoLines[3];
+			const repositoryRootLine = projectSvnInfoLines[4];
 
-				if(projectSvnInfoLines === null)
+			const projectRelativeUrl = relativeUrlLine.substring(14);
+			const projectRepositoryRoot = repositoryRootLine.substring(17);
+
+			const projectRelativeUrlClean = projectRelativeUrl.replace(/^(\^\/)/,"");
+
+			generatingStatusMessage.dispose();
+
+			let svntagOptions: vscode.InputBoxOptions = {
+				prompt: "Choose with what to diff: ",
+				placeHolder: "^/trunk"
+			};
+
+			generatingStatusMessage.dispose();
+
+			vscode.window.showInputBox(svntagOptions).then(value => {	
+				let answer = value;
+				if (!answer || typeof answer === 'undefined')
 				{
-					vscode.window.showErrorMessage('svn info empty');
-					return;
+					answer = '^/trunk';
 				}
+				const finalAnswer = answer;
 
-				const relativeUrlLine = projectSvnInfoLines[3];
-				const repositoryRootLine = projectSvnInfoLines[4];
+				const answerClean = finalAnswer.replace(/^(\^\/)/,"");
 
-				const projectRelativeUrl = relativeUrlLine.substring(14);
-				const projectRepositoryRoot = repositoryRootLine.substring(17);
+				const svnOld = projectRepositoryRoot + '/' + answerClean;
+				const svnNew = projectRepositoryRoot + '/' + projectRelativeUrlClean;
 
-				const projectRelativeUrlClean = projectRelativeUrl.replace(/^(\^\/)/,"");
+				generatingStatusMessage = vscode.window.setStatusBarMessage('Generating DiffTo - fetching from server...');
 
-				generatingStatusMessage.dispose();
-
-				let svntagOptions: vscode.InputBoxOptions = {
-					prompt: "Choose with what to diff: ",
-					placeHolder: "^/trunk"
-				};
-	
-				generatingStatusMessage.dispose();
-	
-				vscode.window.showInputBox(svntagOptions).then(value => {	
-					let answer = value;
-					if (!answer || typeof answer === 'undefined')
-					{
-						answer = '^/trunk';
+				const cp2 = require('child_process');
+				cp2.exec('svn diff --old='+svnOld+' --new='+svnNew, {maxBuffer: 1024*1024*1024}, (err: string, stdout: string, stderr: string) => {
+					if (err) {
+						console.log('error: ' + err);
+						vscode.window.showErrorMessage('error: ' + err);
+						return;
 					}
-					const finalAnswer = answer;
 
-					const answerClean = finalAnswer.replace(/^(\^\/)/,"");
+					generatingStatusMessage.dispose();
+					let parsingStatusMessage = vscode.window.setStatusBarMessage('Generating DiffTo - parsing');
 
-					const svnOld = projectRepositoryRoot + '/' + answerClean;
-					const svnNew = projectRepositoryRoot + '/' + projectRelativeUrlClean;
+					const svndiffContentArray = stdout.split('Index: ');
 
-					generatingStatusMessage = vscode.window.setStatusBarMessage('Generating DiffTo - fetching from server...');
-
-					const cp2 = require('child_process');
-					cp2.exec('svn diff --old='+svnOld+' --new='+svnNew, {maxBuffer: 1024*1024*1024}, (err: string, stdout: string, stderr: string) => {
-						if (err) {
-							console.log('error: ' + err);
-							vscode.window.showErrorMessage('error: ' + err);
+					let filesDiff: any[] = [{
+						'path': 'Choose file',
+					}];
+					svndiffContentArray.forEach(element => {
+						if(element.trim().length === 0)
+						{
 							return;
 						}
 
-						generatingStatusMessage.dispose();
-						let parsingStatusMessage = vscode.window.setStatusBarMessage('Generating DiffTo - parsing');
+						const elementLines = element.split("\n");
+						const path = elementLines[0];
 
-						const svndiffContentArray = stdout.split('Index: ');
-
-						let filesDiff: any[] = [{
-							'path': 'Choose file',
-						}];
-						svndiffContentArray.forEach(element => {
-							if(element.trim().length === 0)
+						var elementAddLines = 0;
+						var elementDeleteLines = 0;
+						elementLines.forEach((elementLine: string) => {
+							if(elementLine.startsWith("-"))
 							{
-								return;
+								elementDeleteLines++;
 							}
-
-							const elementLines = element.split("\n");
-							const path = elementLines[0];
-
-							var elementAddLines = 0;
-							var elementDeleteLines = 0;
-							elementLines.forEach((elementLine: string) => {
-								if(elementLine.startsWith("-"))
-								{
-									elementDeleteLines++;
-								}
-								else if(elementLine.startsWith("+"))
-								{
-									elementAddLines++;
-								}
-							});
-							var elemetType = 'm';
-							if(elementDeleteLines === 1)
+							else if(elementLine.startsWith("+"))
 							{
-								elemetType = 'a';
+								elementAddLines++;
 							}
-							else if(elementAddLines === 1)
-							{
-								elemetType = 'd';
-							}
+						});
+						var elemetType = 'm';
+						if(elementDeleteLines === 1)
+						{
+							elemetType = 'a';
+						}
+						else if(elementAddLines === 1)
+						{
+							elemetType = 'd';
+						}
 
-							filesDiff.push({
-								'path': path,
-								'diffContent': element,
-								'type': elemetType
-							});
-
+						filesDiff.push({
+							'path': path,
+							'diffContent': element,
+							'type': elemetType
 						});
 
-						parsingStatusMessage.dispose();
-						vscode.window.setStatusBarMessage('Generating DiffTo done', 2000);
+					});
 
-						//vscode.window.createTreeView('svnDiffTo', {
-						//	treeDataProvider: new SVNDiffToProvider()
-						//  });
-						//new FileExplorer(context);
+					parsingStatusMessage.dispose();
+					vscode.window.setStatusBarMessage('Generating DiffTo done', 2000);
 
-						const column = vscode.window.activeTextEditor
-							? vscode.window.activeTextEditor.viewColumn
-							: undefined;
-						const panel = vscode.window.createWebviewPanel(
-							'svndiffto',
-							"SVN DiffTO: " + pickedProject + ' <-> ' + finalAnswer,
-							column || vscode.ViewColumn.One,
-							{
-								// Enable scripts in the webview
-								enableScripts: true
-							}
-						);
+					//vscode.window.createTreeView('svnDiffTo', {
+					//	treeDataProvider: new SVNDiffToProvider()
+					//  });
+					//new FileExplorer(context);
 
-						let difItemsSelectContent = '';
-						filesDiff.forEach((element, index) => {
-							difItemsSelectContent += '<option value='+index+'>' +
-								element.type+' - '+element.path
-							+ '</option>';
-						});
+					const column = vscode.window.activeTextEditor
+						? vscode.window.activeTextEditor.viewColumn
+						: undefined;
+					const panel = vscode.window.createWebviewPanel(
+						'svndiffto',
+						"SVN DiffTO: " + pickedProject + ' <-> ' + finalAnswer,
+						column || vscode.ViewColumn.One,
+						{
+							// Enable scripts in the webview
+							enableScripts: true
+						}
+					);
 
-						const cssUri = panel.webview.asWebviewUri(vscode.Uri.joinPath(context.extensionUri, 'src', 'css', 'styles.css'));
+					let difItemsSelectContent = '';
+					filesDiff.forEach((element, index) => {
+						difItemsSelectContent += '<option value='+index+'>' +
+							element.type+' - '+element.path
+						+ '</option>';
+					});
 
-						panel.webview.html = getWebviewContent(difItemsSelectContent, cssUri);
+					const cssUri = panel.webview.asWebviewUri(vscode.Uri.joinPath(context.extensionUri, 'src', 'css', 'styles.css'));
 
-						// Handle messages from the webview
-						panel.webview.onDidReceiveMessage(
-							message => {
-							  switch (message.command) {
-								case 'onSelectChange':
-									const filesDiffType = filesDiff[message.files_diff_index].type;
-									const filesDiffPath = filesDiff[message.files_diff_index].path;
+					panel.webview.html = getWebviewContent(difItemsSelectContent, cssUri);
 
-									if(filesDiffType === 'a')
+					// Handle messages from the webview
+					panel.webview.onDidReceiveMessage(
+						message => {
+							switch (message.command) {
+							case 'onSelectChange':
+								const filesDiffType = filesDiff[message.files_diff_index].type;
+								const filesDiffPath = filesDiff[message.files_diff_index].path;
+
+								if(filesDiffType === 'a')
+								{
+									const filePath = workspaceFolderPath + '/' + filesDiff[message.files_diff_index].path;
+									var openPath = vscode.Uri.parse("file://" + filePath); //A request file path
+									vscode.workspace.fs.stat(openPath).then(fStat => {
+										vscode.workspace.fs.readFile(openPath).then(content => {
+											if(typeof filesDiff[message.files_diff_index].tempPath === 'undefined')
+											{
+												const cpTemp1 = require('child_process');
+												cpTemp1.exec('mktemp', (err: string, stdout: string, stderr: string) => {
+													if (err) {
+														console.log('error: ' + err);
+														vscode.window.showErrorMessage('error: ' + err);
+														return;
+													}
+
+													const emptyTempFilePath = stdout.trim();
+													var emptyTempPathUri = vscode.Uri.parse("file://" + emptyTempFilePath);
+
+													filesDiff[message.files_diff_index].tempPath = emptyTempPathUri;
+
+													vscode.commands.executeCommand(
+														'vscode.diff', 
+														emptyTempPathUri, 
+														openPath,  
+														"SVN DiffTO: " + filesDiffPath,
+														{
+															preserveFocus: true,
+															viewColumn: vscode.ViewColumn.Beside
+														}
+													);
+												});
+											}
+											else
+											{
+												var emptyTempPathUri = filesDiff[message.files_diff_index].tempPath;
+												vscode.commands.executeCommand(
+													'vscode.diff', 
+													emptyTempPathUri, 
+													openPath,  
+													"SVN DiffTO: " + filesDiffPath,
+													{
+														preserveFocus: true,
+														viewColumn: vscode.ViewColumn.Beside
+													}
+												);
+											}
+										});
+									});
+								}
+								else
+								{
+									if(typeof filesDiff[message.files_diff_index].tempPath1 === 'undefined')
 									{
-										const filePath = workspaceFolderPath + '/' + filesDiff[message.files_diff_index].path;
-										var openPath = vscode.Uri.parse("file://" + filePath); //A request file path
-										vscode.workspace.fs.stat(openPath).then(fStat => {
-											vscode.workspace.fs.readFile(openPath).then(content => {
-												if(typeof filesDiff[message.files_diff_index].tempPath === 'undefined')
+										const cpTemp1 = require('child_process');
+										cpTemp1.exec('mktemp', (err: string, stdout: string, stderr: string) => {
+											if (err) {
+												console.log('error: ' + err);
+												vscode.window.showErrorMessage('error: ' + err);
+												return;
+											}
+
+											const tempFilePath = stdout.trim();
+											var tempPathUri = vscode.Uri.parse("file://" + tempFilePath);
+
+											const svnPath = svnOld + '/' + filesDiff[message.files_diff_index].path;
+											const cp3 = require('child_process');
+											cp3.exec('svn cat '+svnPath+' > '+tempFilePath, {maxBuffer: 1024*1024*1024}, (err: string, stdout: string, stderr: string) => {
+												if (err) {
+													console.log('error: ' + err);
+													vscode.window.showErrorMessage('error: ' + err);
+													return;
+												}
+
+												filesDiff[message.files_diff_index].tempPath1 = tempPathUri;
+
+												if(filesDiffType === 'd')
 												{
-													const cpTemp1 = require('child_process');
-													cpTemp1.exec('mktemp', (err: string, stdout: string, stderr: string) => {
+													const cpTemp2 = require('child_process');
+													cpTemp2.exec('mktemp', (err: string, stdout: string, stderr: string) => {
 														if (err) {
 															console.log('error: ' + err);
 															vscode.window.showErrorMessage('error: ' + err);
@@ -210,12 +250,12 @@ export function activate(context: vscode.ExtensionContext) {
 														const emptyTempFilePath = stdout.trim();
 														var emptyTempPathUri = vscode.Uri.parse("file://" + emptyTempFilePath);
 
-														filesDiff[message.files_diff_index].tempPath = emptyTempPathUri;
+														filesDiff[message.files_diff_index].tempPath2 = emptyTempPathUri;
 
 														vscode.commands.executeCommand(
 															'vscode.diff', 
-															emptyTempPathUri, 
-															openPath,  
+															tempPathUri, 
+															emptyTempPathUri,  
 															"SVN DiffTO: " + filesDiffPath,
 															{
 																preserveFocus: true,
@@ -224,13 +264,15 @@ export function activate(context: vscode.ExtensionContext) {
 														);
 													});
 												}
-												else
+												else /// m
 												{
-													var emptyTempPathUri = filesDiff[message.files_diff_index].tempPath;
-													vscode.commands.executeCommand(
-														'vscode.diff', 
-														emptyTempPathUri, 
-														openPath,  
+													const filePath = workspaceFolderPath + '/' + filesDiffPath;
+													var openPath = vscode.Uri.parse("file://" + filePath); //A request file path
+
+													filesDiff[message.files_diff_index].tempPath2 = openPath;
+
+													vscode.commands.executeCommand('vscode.diff', 
+														tempPathUri, openPath,  
 														"SVN DiffTO: " + filesDiffPath,
 														{
 															preserveFocus: true,
@@ -243,105 +285,28 @@ export function activate(context: vscode.ExtensionContext) {
 									}
 									else
 									{
-										if(typeof filesDiff[message.files_diff_index].tempPath1 === 'undefined')
-										{
-											const cpTemp1 = require('child_process');
-											cpTemp1.exec('mktemp', (err: string, stdout: string, stderr: string) => {
-												if (err) {
-													console.log('error: ' + err);
-													vscode.window.showErrorMessage('error: ' + err);
-													return;
-												}
-
-												const tempFilePath = stdout.trim();
-												var tempPathUri = vscode.Uri.parse("file://" + tempFilePath);
-
-												const svnPath = svnOld + '/' + filesDiff[message.files_diff_index].path;
-												const cp3 = require('child_process');
-												cp3.exec('svn cat '+svnPath+' > '+tempFilePath, {maxBuffer: 1024*1024*1024}, (err: string, stdout: string, stderr: string) => {
-													if (err) {
-														console.log('error: ' + err);
-														vscode.window.showErrorMessage('error: ' + err);
-														return;
-													}
-
-													filesDiff[message.files_diff_index].tempPath1 = tempPathUri;
-
-													if(filesDiffType === 'd')
-													{
-														const cpTemp2 = require('child_process');
-														cpTemp2.exec('mktemp', (err: string, stdout: string, stderr: string) => {
-															if (err) {
-																console.log('error: ' + err);
-																vscode.window.showErrorMessage('error: ' + err);
-																return;
-															}
-
-															const emptyTempFilePath = stdout.trim();
-															var emptyTempPathUri = vscode.Uri.parse("file://" + emptyTempFilePath);
-
-															filesDiff[message.files_diff_index].tempPath2 = emptyTempPathUri;
-
-															vscode.commands.executeCommand(
-																'vscode.diff', 
-																tempPathUri, 
-																emptyTempPathUri,  
-																"SVN DiffTO: " + filesDiffPath,
-																{
-																	preserveFocus: true,
-																	viewColumn: vscode.ViewColumn.Beside
-																}
-															);
-														});
-													}
-													else /// m
-													{
-														const filePath = workspaceFolderPath + '/' + filesDiffPath;
-														var openPath = vscode.Uri.parse("file://" + filePath); //A request file path
-
-														filesDiff[message.files_diff_index].tempPath2 = openPath;
-
-														vscode.commands.executeCommand('vscode.diff', 
-															tempPathUri, openPath,  
-															"SVN DiffTO: " + filesDiffPath,
-															{
-																preserveFocus: true,
-																viewColumn: vscode.ViewColumn.Beside
-															}
-														);
-													}
-												});
-											});
-										}
-										else
-										{
-											vscode.commands.executeCommand('vscode.diff', 
-												filesDiff[message.files_diff_index].tempPath1, 
-												filesDiff[message.files_diff_index].tempPath2,  
-												"SVN DiffTO: " + filesDiffPath,
-												{
-													preserveFocus: true,
-													viewColumn: vscode.ViewColumn.Beside
-												}
-											);
-										}
+										vscode.commands.executeCommand('vscode.diff', 
+											filesDiff[message.files_diff_index].tempPath1, 
+											filesDiff[message.files_diff_index].tempPath2,  
+											"SVN DiffTO: " + filesDiffPath,
+											{
+												preserveFocus: true,
+												viewColumn: vscode.ViewColumn.Beside
+											}
+										);
 									}
+								}
 
 
-									return;
-							  }
-							},
-							undefined,
-							context.subscriptions
-						  );
-					});
+								return;
+							}
+						},
+						undefined,
+						context.subscriptions
+						);
 				});
 			});
-
 		});
-		
-		quickPick.show();
-
 	});
 
 	context.subscriptions.push(disposable);
