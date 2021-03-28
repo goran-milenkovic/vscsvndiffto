@@ -14,6 +14,10 @@
 
 ## Release Notes
 
+## [0.0.3]
+
+Instead of new tab with webview for file changes display explorer view
+
 ### 0.0.2
 
 Running of command moved from command palete to project right click menu

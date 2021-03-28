@@ -3,7 +3,7 @@
 	"publisher": "milosjankovic",
 	"displayName": "SVN DiffTo",
 	"description": "SVN DiffTo",
-	"version": "0.0.2",
+	"version": "0.0.3",
 	"engines": {
 		"vscode": "^1.54.0"
 	},
@@ -35,7 +35,15 @@
 					"when": "true"
 				}
 			]
-		}
+		},
+		"views": {
+			"explorer": [
+			  {
+				"id": "svndiffto",
+				"name": "SVN DiffTo"
+			  }
+			]
+		  }
 	},
 	"scripts": {
 		"vscode:prepublish": "npm run compile",
