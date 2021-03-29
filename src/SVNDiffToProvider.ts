@@ -19,7 +19,7 @@ export class SVNDiffToProvider implements vscode.TreeDataProvider<SVNDiffToItem>
                     return false;
                 }
                 const svnDiffToItem = new SVNDiffToItem(
-                    element.type + ' - ' + element.path.replace(/^.*[\\\/]/, ''),
+                    element.path.replace(/^.*[\\\/]/, ''),
                     element.path,
                     element.type, 
                     element.leftFile, 
@@ -36,41 +36,46 @@ export class SVNDiffToProvider implements vscode.TreeDataProvider<SVNDiffToItem>
 class SVNDiffToItem extends vscode.TreeItem {
     constructor(
       public readonly label: string,
-      public readonly description: string,
+      private diffPath: string,
       private type: string,
       private leftFileUri: vscode.Uri,
       private rightFileUri: vscode.Uri,
       public readonly collapsibleState: vscode.TreeItemCollapsibleState
     ) {
         super(label, collapsibleState);
-        this.tooltip = `${this.description}`;
-        this.command = {
-            "title": "SVN DiffTo",
-            "command": "vscode.diff",
-            "arguments": [
-                leftFileUri, 
-                rightFileUri,
-                "SVN DiffTO: " + label
-            ]
-        };
 
-        let iconName = 'invalid.png';
-        if(type === 'm')
+        if(type !== null && leftFileUri !== null && rightFileUri !== null)
         {
-            iconName = 'dot_blue.png';
+            this.description = `${this.type} - ${this.diffPath}`;
+            this.tooltip = `${this.diffPath}`;
+            this.command = {
+                "title": "SVN DiffTo",
+                "command": "vscode.diff",
+                "arguments": [
+                    leftFileUri,
+                    rightFileUri,
+                    "SVN DiffTO: " + label
+                ]
+            };
+
+            let iconName = 'invalid.png';
+            if(type === 'm')
+            {
+                iconName = 'dot_blue.png';
+            }
+            else if(type === 'a')
+            {
+                iconName = 'dot_green.png';
+            }
+            else if(type === 'd')
+            {
+                iconName = 'dot_grey.png';
+            }
+            this.iconPath = {
+                light: path.join(__filename, '..', '..', 'resources', iconName),
+                dark: path.join(__filename, '..', '..', 'resources', iconName)
+            };
         }
-        else if(type === 'a')
-        {
-            iconName = 'dot_green.png';
-        }
-        else if(type === 'd')
-        {
-            iconName = 'dot_grey.png';
-        }
-        this.iconPath = {
-          light: path.join(__filename, '..', '..', 'resources', iconName),
-          dark: path.join(__filename, '..', '..', 'resources', iconName)
-        };
     }
   }
   

@@ -66,6 +66,17 @@ export function activate(context: vscode.ExtensionContext) {
 				const svnNew = projectRepositoryRoot + '/' + projectRelativeUrlClean;
 
 				generatingStatusMessage = vscode.window.setStatusBarMessage('Generating DiffTo - fetching from server...');
+				vscode.window.registerTreeDataProvider(
+					'svndiffto',
+					new SVNDiffToProvider([
+						{
+							'path': 'Generating DiffTo - fetching from server...',
+							'type': null,
+							'leftFile': null,
+							'rightFile': null
+						}
+					])
+				);
 
 				const cp2 = require('child_process');
 				cp2.exec('svn diff --old='+svnOld+' --new='+svnNew, {maxBuffer: 1024*1024*1024}, (err: string, stdout: string, stderr: string) => {
@@ -77,6 +88,17 @@ export function activate(context: vscode.ExtensionContext) {
 
 					generatingStatusMessage.dispose();
 					let parsingStatusMessage = vscode.window.setStatusBarMessage('Generating DiffTo - parsing');
+					vscode.window.registerTreeDataProvider(
+						'svndiffto',
+						new SVNDiffToProvider([
+							{
+								'path': 'Generating DiffTo - parsing',
+								'type': null,
+								'leftFile': null,
+								'rightFile': null
+							}
+						])
+					);
 
 					const svndiffContentArray = stdout.split('Index: ');
 
@@ -85,7 +107,6 @@ export function activate(context: vscode.ExtensionContext) {
 
 					const tempFilePath = cpTemp1Stdout.toString().trim();
 					var emptyTempPathUri = vscode.Uri.parse("file://" + tempFilePath);
-
 
 					let treeData: any[] = [];
 					svndiffContentArray.forEach(element => {
@@ -161,7 +182,19 @@ export function activate(context: vscode.ExtensionContext) {
 							'rightFile': rightFile
 						});
 					});
-					
+
+					vscode.window.registerTreeDataProvider(
+						'svndiffto',
+						new SVNDiffToProvider([
+							{
+								'path': 'Generating DiffTo - done',
+								'type': null,
+								'leftFile': null,
+								'rightFile': null
+							}
+						])
+					);
+
 					vscode.window.registerTreeDataProvider(
 						'svndiffto',
 						new SVNDiffToProvider(treeData)
