@@ -18,7 +18,14 @@ export class SVNDiffToProvider implements vscode.TreeDataProvider<SVNDiffToItem>
                 {
                     return false;
                 }
-                const svnDiffToItem = new SVNDiffToItem(element.type + ' - ' + element.path, element.type, element.leftFile, element.rightFile, vscode.TreeItemCollapsibleState.None);
+                const svnDiffToItem = new SVNDiffToItem(
+                    element.type + ' - ' + element.path.replace(/^.*[\\\/]/, ''),
+                    element.path,
+                    element.type, 
+                    element.leftFile, 
+                    element.rightFile, 
+                    vscode.TreeItemCollapsibleState.None
+                );
                 resolveResult.push(svnDiffToItem);
             });
             return Promise.resolve(resolveResult);
@@ -29,14 +36,14 @@ export class SVNDiffToProvider implements vscode.TreeDataProvider<SVNDiffToItem>
 class SVNDiffToItem extends vscode.TreeItem {
     constructor(
       public readonly label: string,
+      public readonly description: string,
       private type: string,
       private leftFileUri: vscode.Uri,
       private rightFileUri: vscode.Uri,
       public readonly collapsibleState: vscode.TreeItemCollapsibleState
     ) {
         super(label, collapsibleState);
-        this.tooltip = `${this.label}`;
-        this.description = this.label;
+        this.tooltip = `${this.description}`;
         this.command = {
             "title": "SVN DiffTo",
             "command": "vscode.diff",
