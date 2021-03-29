@@ -59,15 +59,15 @@ class SVNDiffToItem extends vscode.TreeItem {
             };
 
             let iconName = 'invalid.png';
-            if(type === 'm')
+            if(type === 'M')
             {
                 iconName = 'dot_blue.png';
             }
-            else if(type === 'a')
+            else if(type === 'A')
             {
                 iconName = 'dot_green.png';
             }
-            else if(type === 'd')
+            else if(type === 'D')
             {
                 iconName = 'dot_grey.png';
             }

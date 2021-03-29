@@ -117,6 +117,10 @@ export function activate(context: vscode.ExtensionContext) {
 
 						const elementLines = element.split("\n");
 						const path = elementLines[0];
+						if(path === '.')
+						{
+							return; /// continue
+						}
 
 						var elementAddLines = 0;
 						var elementDeleteLines = 0;
@@ -130,14 +134,14 @@ export function activate(context: vscode.ExtensionContext) {
 								elementAddLines++;
 							}
 						});
-						var elementType = 'm';
+						var elementType = 'M';
 						if(elementDeleteLines === 1)
 						{
-							elementType = 'a';
+							elementType = 'A';
 						}
 						else if(elementAddLines === 1)
 						{
-							elementType = 'd';
+							elementType = 'D';
 						}
 
 						const filePath = workspaceFolderPath + '/' + path;
@@ -146,7 +150,7 @@ export function activate(context: vscode.ExtensionContext) {
 						let leftFile = null;
 						let rightFile = null;
 
-						if(elementType === 'a')
+						if(elementType === 'A')
 						{
 							leftFile = emptyTempPathUri;
 							rightFile = openPath;
@@ -163,7 +167,7 @@ export function activate(context: vscode.ExtensionContext) {
 							const cp3 = require('child_process');
 							cp3.execSync('svn cat '+svnPath+' > '+tempFilePath, {maxBuffer: 1024*1024*1024});
 
-							if(elementType === 'd')
+							if(elementType === 'D')
 							{
 								leftFile = tempPathUri;
 								rightFile = emptyTempPathUri;
