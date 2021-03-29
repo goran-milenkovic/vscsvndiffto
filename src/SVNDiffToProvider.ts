@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import * as path from 'path';
 
 export class SVNDiffToProvider implements vscode.TreeDataProvider<SVNDiffToItem> {
     constructor(private filesDiff: any) {}
@@ -45,11 +46,24 @@ class SVNDiffToItem extends vscode.TreeItem {
                 "SVN DiffTO: " + label
             ]
         };
+
+        let iconName = 'invalid.png';
+        if(type === 'm')
+        {
+            iconName = 'dot_blue.png';
+        }
+        else if(type === 'a')
+        {
+            iconName = 'dot_green.png';
+        }
+        else if(type === 'd')
+        {
+            iconName = 'dot_grey.png';
+        }
+        this.iconPath = {
+          light: path.join(__filename, '..', '..', 'resources', iconName),
+          dark: path.join(__filename, '..', '..', 'resources', iconName)
+        };
     }
-  
-    // iconPath = {
-    //   light: path.join(__filename, '..', '..', 'resources', 'light', 'dependency.svg'),
-    //   dark: path.join(__filename, '..', '..', 'resources', 'dark', 'dependency.svg')
-    // };
   }
   

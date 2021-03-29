@@ -88,9 +88,6 @@ export function activate(context: vscode.ExtensionContext) {
 
 
 					let treeData: any[] = [];
-					// let filesDiff: any[] = [{
-					// 	'path': 'Choose file',
-					// }];
 					svndiffContentArray.forEach(element => {
 						if(element.trim().length === 0)
 						{
