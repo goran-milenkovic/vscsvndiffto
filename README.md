@@ -14,6 +14,12 @@
 
 ## Release Notes
 
+### 0.0.5
+
+Fix DiffTo with non-root directory and single file
+Input with value suggestion
+Input with path relative to chosen DiffTo element
+
 ### 0.0.4
 
 DiffTo content icons

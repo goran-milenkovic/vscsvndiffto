@@ -10,8 +10,36 @@ export function activate(context: vscode.ExtensionContext) {
 	// The command has been defined in the package.json file
 	// Now provide the implementation of the command with registerCommand
 	// The commandId parameter must match the command field in package.json
-	let disposable = vscode.commands.registerCommand('svndiffto.svndiffto', (params) => {		
+	let disposable = vscode.commands.registerCommand('svndiffto.svndiffto', (params) => {
+		let workspaceFolders = vscode.workspace.workspaceFolders;
+		if(typeof workspaceFolders === 'undefined')
+		{
+			workspaceFolders = [];
+		}
+		if(workspaceFolders.length === 0)
+		{
+			vscode.window.showErrorMessage('No workspace folders');
+			return;
+		}
+		const workspaceFolderPaths = workspaceFolders.map(wsf => wsf.uri.path);
+
 		const workspaceFolderPath = params.path;
+
+		let placeHolderSufix = '';
+		for(let i=0; i<workspaceFolderPaths.length; i++)
+		{
+			const wsfpath = workspaceFolderPaths[i];
+			if(wsfpath === workspaceFolderPath)
+			{
+				break;
+			}
+			else if(workspaceFolderPath.startsWith(wsfpath))
+			{
+				placeHolderSufix = workspaceFolderPath.substring(wsfpath.length);
+				break;
+			}
+		}
+
 		const pickedProject = workspaceFolderPath.substring(workspaceFolderPath.lastIndexOf("/")+1);
 
 		let generatingStatusMessage = vscode.window.setStatusBarMessage('fetching svn info');
@@ -35,8 +63,34 @@ export function activate(context: vscode.ExtensionContext) {
 				return;
 			}
 
-			const relativeUrlLine = projectSvnInfoLines[3];
-			const repositoryRootLine = projectSvnInfoLines[4];
+			let relativeUrlLine = '';
+			let repositoryRootLine = '';
+			let isSingleFileDiff = false;
+			projectSvnInfoLines.forEach(line => {
+				const lineTrim = line.trim();
+				if(lineTrim.startsWith('Relative URL: '))
+				{
+					relativeUrlLine = lineTrim;
+				}
+				else if(lineTrim.startsWith('Repository Root: '))
+				{
+					repositoryRootLine = lineTrim;
+				}
+				else if(lineTrim.startsWith('Name: '))
+				{
+					isSingleFileDiff = true;
+				}
+			});
+			if(relativeUrlLine === '')
+			{
+				vscode.window.showErrorMessage('svn info no relative url line');
+				return;
+			}
+			if(repositoryRootLine === '')
+			{
+				vscode.window.showErrorMessage('svn info no repository root line');
+				return;
+			}
 
 			const projectRelativeUrl = relativeUrlLine.substring(14);
 			const projectRepositoryRoot = repositoryRootLine.substring(17);
@@ -45,9 +99,12 @@ export function activate(context: vscode.ExtensionContext) {
 
 			generatingStatusMessage.dispose();
 
+			const initialValue = "^/trunk" + placeHolderSufix;
+
 			let svntagOptions: vscode.InputBoxOptions = {
 				prompt: "Choose with what to diff: ",
-				placeHolder: "^/trunk"
+				value: initialValue,
+				placeHolder: initialValue
 			};
 
 			generatingStatusMessage.dispose();
@@ -56,7 +113,7 @@ export function activate(context: vscode.ExtensionContext) {
 				let answer = value;
 				if (!answer || typeof answer === 'undefined')
 				{
-					answer = '^/trunk';
+					answer = initialValue;
 				}
 				const finalAnswer = answer;
 
@@ -144,7 +201,11 @@ export function activate(context: vscode.ExtensionContext) {
 							elementType = 'D';
 						}
 
-						const filePath = workspaceFolderPath + '/' + path;
+						let filePath = workspaceFolderPath;
+						if(isSingleFileDiff === false)
+						{
+							filePath += '/' + path;
+						}
 						var openPath = vscode.Uri.parse("file://" + filePath); //A request file path
 
 						let leftFile = null;
@@ -163,7 +224,11 @@ export function activate(context: vscode.ExtensionContext) {
 							const tempFilePath = cpTemp2Stdout.toString().trim();
 							var tempPathUri = vscode.Uri.parse("file://" + tempFilePath);
 
-							const svnPath = svnOld + '/' + path;
+							let svnPath = svnOld;
+							if(isSingleFileDiff === false)
+							{
+								svnPath += '/' + path;
+							}
 							const cp3 = require('child_process');
 							cp3.execSync('svn cat '+svnPath+' > '+tempFilePath, {maxBuffer: 1024*1024*1024});
 

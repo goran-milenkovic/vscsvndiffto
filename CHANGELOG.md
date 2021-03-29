@@ -1,8 +1,10 @@
 # Change Log
 
-All notable changes to the "svndiffto" extension will be documented in this file.
+### [0.0.5]
 
-Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
+- Fix DiffTo with non-root directory and single file
+- Input with value suggestion
+- Input with path relative to chosen DiffTo element
 
 ## [0.0.4]
 
