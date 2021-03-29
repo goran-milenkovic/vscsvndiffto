@@ -14,7 +14,15 @@
 
 ## Release Notes
 
-## [0.0.3]
+### 0.0.4
+
+DiffTo content icons
+DiffTo content display only filename, not full path
+Showing progress instead DiffTo content
+Dot excluded from DiffTo content
+Large letter margers
+
+### 0.0.3
 
 Instead of new tab with webview for file changes display explorer view
 
