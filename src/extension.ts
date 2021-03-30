@@ -1,7 +1,7 @@
 // The module 'vscode' contains the VS Code extensibility API
 // Import the module and reference it with the alias vscode in your code below
 import * as vscode from 'vscode';
-import { SVNDiffToProvider } from './SVNDiffToProvider';
+import { SVNDiffToProvider, SVNDiffToItemType } from './SVNDiffToProvider';
 
 // this method is called when your extension is activated
 // your extension is activated the very first time the command is executed
@@ -128,9 +128,7 @@ export function activate(context: vscode.ExtensionContext) {
 					new SVNDiffToProvider([
 						{
 							'path': 'Generating DiffTo - fetching from server...',
-							'type': null,
-							'leftFile': null,
-							'rightFile': null
+							'type': SVNDiffToItemType.loading
 						}
 					])
 				);
@@ -150,9 +148,7 @@ export function activate(context: vscode.ExtensionContext) {
 						new SVNDiffToProvider([
 							{
 								'path': 'Generating DiffTo - parsing',
-								'type': null,
-								'leftFile': null,
-								'rightFile': null
+								'type': SVNDiffToItemType.loading
 							}
 						])
 					);
@@ -191,14 +187,14 @@ export function activate(context: vscode.ExtensionContext) {
 								elementAddLines++;
 							}
 						});
-						var elementType = 'M';
+						var elementType = SVNDiffToItemType.svnModify;
 						if(elementDeleteLines === 1)
 						{
-							elementType = 'A';
+							elementType = SVNDiffToItemType.svnAdd;
 						}
 						else if(elementAddLines === 1)
 						{
-							elementType = 'D';
+							elementType = SVNDiffToItemType.svnDelete;
 						}
 
 						let filePath = workspaceFolderPath;
@@ -211,7 +207,7 @@ export function activate(context: vscode.ExtensionContext) {
 						let leftFile = null;
 						let rightFile = null;
 
-						if(elementType === 'A')
+						if(elementType === SVNDiffToItemType.svnAdd)
 						{
 							leftFile = emptyTempPathUri;
 							rightFile = openPath;
@@ -232,7 +228,7 @@ export function activate(context: vscode.ExtensionContext) {
 							const cp3 = require('child_process');
 							cp3.execSync('svn cat '+svnPath+' > '+tempFilePath, {maxBuffer: 1024*1024*1024});
 
-							if(elementType === 'D')
+							if(elementType === SVNDiffToItemType.svnDelete)
 							{
 								leftFile = tempPathUri;
 								rightFile = emptyTempPathUri;
@@ -257,9 +253,7 @@ export function activate(context: vscode.ExtensionContext) {
 						new SVNDiffToProvider([
 							{
 								'path': 'Generating DiffTo - done',
-								'type': null,
-								'leftFile': null,
-								'rightFile': null
+								'type': SVNDiffToItemType.loading
 							}
 						])
 					);

@@ -14,10 +14,6 @@ export class SVNDiffToProvider implements vscode.TreeDataProvider<SVNDiffToItem>
         } else {
             var resolveResult: SVNDiffToItem[] = [];
             this.filesDiff.forEach((element: any) => {
-                if(element.path === 'Choose file')
-                {
-                    return false;
-                }
                 const svnDiffToItem = new SVNDiffToItem(
                     element.path.replace(/^.*[\\\/]/, ''),
                     element.path,
@@ -37,14 +33,21 @@ class SVNDiffToItem extends vscode.TreeItem {
     constructor(
       public readonly label: string,
       private diffPath: string,
-      private type: string,
+      private type: SVNDiffToItemType,
       private leftFileUri: vscode.Uri,
       private rightFileUri: vscode.Uri,
       public readonly collapsibleState: vscode.TreeItemCollapsibleState
     ) {
         super(label, collapsibleState);
 
-        if(type !== null && leftFileUri !== null && rightFileUri !== null)
+        if(this.type === SVNDiffToItemType.loading)
+        {
+            this.iconPath = {
+                light: path.join(__filename, '..', '..', 'resources', 'loading_light.png'),
+                dark: path.join(__filename, '..', '..', 'resources', 'loading_dark.png')
+            };
+        }
+        else
         {
             this.description = `${this.type} - ${this.diffPath}`;
             this.tooltip = `${this.diffPath}`;
@@ -59,15 +62,15 @@ class SVNDiffToItem extends vscode.TreeItem {
             };
 
             let iconName = 'invalid.png';
-            if(type === 'M')
+            if(type === SVNDiffToItemType.svnModify)
             {
                 iconName = 'dot_blue.png';
             }
-            else if(type === 'A')
+            else if(type === SVNDiffToItemType.svnAdd)
             {
                 iconName = 'dot_green.png';
             }
-            else if(type === 'D')
+            else if(type === SVNDiffToItemType.svnDelete)
             {
                 iconName = 'dot_grey.png';
             }
@@ -77,5 +80,12 @@ class SVNDiffToItem extends vscode.TreeItem {
             };
         }
     }
-  }
+}
+
+export enum SVNDiffToItemType {
+    loading = 'L',
+    svnModify = 'M',
+    svnAdd = 'A',
+    svnDelete = 'D'
+}
   
