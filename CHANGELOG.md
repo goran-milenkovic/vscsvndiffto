@@ -1,6 +1,11 @@
 # Change Log
 
-### [0.0.5]
+## [0.0.6]
+
+- Refactored DiffTo item type
+- Added DiffTo loading item icon
+
+## [0.0.5]
 
 - Fix DiffTo with non-root directory and single file
 - Input with value suggestion
