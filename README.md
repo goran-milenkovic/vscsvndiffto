@@ -19,7 +19,9 @@
 
 ## Release Notes
 
-### 0.0.6
+### 0.0.7
 
-* Refactored DiffTo item type
-* Added DiffTo loading item icon
+* SVN item type detection fix
+* Added unknown type
+* Differentiate loading type
+* Generating diffto parsing with progress

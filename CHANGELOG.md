@@ -1,5 +1,12 @@
 # Change Log
 
+## [0.0.7]
+
+- SVN item type detection fix
+- Added unknown type
+- Differentiate loading type
+- Generating diffto parsing with progress
+
 ## [0.0.6]
 
 - Refactored DiffTo item type
