@@ -154,6 +154,7 @@ export function activate(context: vscode.ExtensionContext) {
 					);
 
 					const svndiffContentArray = stdout.split('Index: ');
+					const svndiffContentArrayLength = svndiffContentArray.length;
 
 					const cpTemp1 = require('child_process');
 					const cpTemp1Stdout = cpTemp1.execSync('mktemp');
@@ -162,7 +163,21 @@ export function activate(context: vscode.ExtensionContext) {
 					var emptyTempPathUri = vscode.Uri.parse("file://" + tempFilePath);
 
 					let treeData: any[] = [];
+					let parsingCounter = 0;
 					svndiffContentArray.forEach(element => {
+
+						parsingCounter++;
+
+						vscode.window.registerTreeDataProvider(
+							'svndiffto',
+							new SVNDiffToProvider([
+								{
+									'path': 'Generating DiffTo - parsing '+ parsingCounter + '/' + svndiffContentArrayLength,
+									'type': SVNDiffToItemType.loading
+								}
+							])
+						);
+
 						if(element.trim().length === 0)
 						{
 							return;
@@ -174,27 +189,32 @@ export function activate(context: vscode.ExtensionContext) {
 						{
 							return; /// continue
 						}
+						
+						const elementLines2 = elementLines[2];
+						const elementLines3 = elementLines[3];
+						
+						var elementType = SVNDiffToItemType.unknown;
 
-						var elementAddLines = 0;
-						var elementDeleteLines = 0;
-						elementLines.forEach((elementLine: string) => {
-							if(elementLine.startsWith("-"))
-							{
-								elementDeleteLines++;
-							}
-							else if(elementLine.startsWith("+"))
-							{
-								elementAddLines++;
-							}
-						});
-						var elementType = SVNDiffToItemType.svnModify;
-						if(elementDeleteLines === 1)
+						if(elementLines2.includes('(revision ') && elementLines3.includes('(revision '))
+						{
+							elementType = SVNDiffToItemType.svnModify;
+						}
+						else if(elementLines2.endsWith('(nonexistent)') && elementLines3.includes('(revision '))
 						{
 							elementType = SVNDiffToItemType.svnAdd;
 						}
-						else if(elementAddLines === 1)
+						else if(elementLines3.endsWith('(nonexistent)') && elementLines2.includes('(revision '))
 						{
 							elementType = SVNDiffToItemType.svnDelete;
+						}
+						if(elementLines2 === 'Cannot display: file marked as a binary type.')
+						{
+							elementLines.forEach((elementLine: string) => {
+								if(elementLine === 'Added: svn:mime-type')
+								{
+									elementType = SVNDiffToItemType.svnAdd;
+								}
+							});
 						}
 
 						let filePath = workspaceFolderPath;

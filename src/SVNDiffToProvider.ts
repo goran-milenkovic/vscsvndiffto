@@ -14,8 +14,13 @@ export class SVNDiffToProvider implements vscode.TreeDataProvider<SVNDiffToItem>
         } else {
             var resolveResult: SVNDiffToItem[] = [];
             this.filesDiff.forEach((element: any) => {
+                let elementLabel = element.path;
+                if(element.type !== SVNDiffToItemType.loading)
+                {
+                    elementLabel = element.path.replace(/^.*[\\\/]/, '');
+                }
                 const svnDiffToItem = new SVNDiffToItem(
-                    element.path.replace(/^.*[\\\/]/, ''),
+                    elementLabel,
                     element.path,
                     element.type, 
                     element.leftFile, 
@@ -86,6 +91,7 @@ export enum SVNDiffToItemType {
     loading = 'L',
     svnModify = 'M',
     svnAdd = 'A',
-    svnDelete = 'D'
+    svnDelete = 'D',
+    unknown = 'U'
 }
   
