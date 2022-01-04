@@ -36,14 +36,23 @@
 				}
 			]
 		},
-		"views": {
-			"explorer": [
-			  {
-				"id": "svndiffto",
-				"name": "SVN DiffTo"
-			  }
+		"viewsContainers": {
+			"activitybar": [
+				{
+					"id": "svndiffto",
+					"title": "SVN DiffTo",
+					"icon": "resources/icon.png"
+				}
 			]
-		  }
+		},
+		"views": {
+			"svndiffto": [
+				{
+					"id": "svndiffto",
+					"name": "SVN DiffTo"
+				}
+			]
+		}
 	},
 	"scripts": {
 		"vscode:prepublish": "npm run compile",
